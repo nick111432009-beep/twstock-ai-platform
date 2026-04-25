@@ -12,6 +12,7 @@ import streamlit as st
 
 from src.data import get_stock_data, list_popular_stocks
 from src.trading import get_default_account
+from src.trading.paper_trading import DEFAULT_INITIAL_CAPITAL
 
 
 st.set_page_config(page_title="虛擬交易", page_icon="💰", layout="wide")
@@ -30,9 +31,27 @@ with st.sidebar:
     st.metric("初始資金", f"{account.initial_capital:,.0f}")
     st.metric("目前現金", f"{account.cash:,.0f}")
 
-    if st.button("🔄 重置帳戶", help="清空所有持倉與交易紀錄"):
+    st.markdown("---")
+    st.markdown("**🔧 帳戶調整**")
+
+    if st.button("🔄 重置帳戶", help="清空所有持倉與交易紀錄，回到初始資金"):
         account.reset()
         st.success("帳戶已重置")
+        st.rerun()
+
+    # 自訂資金
+    st.caption("想練習更大資金的部位配置嗎?")
+    new_capital = st.number_input(
+        "升級至新初始資金 (元)",
+        min_value=100_000,
+        max_value=1_000_000_000,
+        value=int(DEFAULT_INITIAL_CAPITAL),
+        step=1_000_000,
+        format="%d",
+    )
+    if st.button("💎 重置並套用新資金", help="會清空所有交易並把帳戶初始資金升級成上方數字"):
+        account.reset(new_initial_capital=float(new_capital))
+        st.success(f"帳戶已升級為 {new_capital:,} 元!")
         st.rerun()
 
 

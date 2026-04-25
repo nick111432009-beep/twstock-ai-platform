@@ -60,6 +60,11 @@ _clean_orphan_sqlite_files()
 COMMISSION_RATE = 0.001425 * 0.6   # 打 6 折
 TAX_RATE = 0.003
 
+# 預設虛擬資金:
+#   1000 萬足夠買 1 張台積電 (~218 萬) 還有餘力做組合配置
+#   也讓使用者體驗「有點規模」的投資人手感
+DEFAULT_INITIAL_CAPITAL = 10_000_000
+
 
 @contextmanager
 def _connect():
@@ -116,7 +121,6 @@ def _init_db():
     def _create_and_verify():
         with _connect() as conn:
             conn.executescript(_SCHEMA)
-            # 驗證 accounts 表確實存在
             row = conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='accounts'"
             ).fetchone()
@@ -124,7 +128,7 @@ def _init_db():
 
     try:
         if _create_and_verify():
-            return  # 成功就直接結束
+            return
     except Exception:
         pass
 
@@ -136,8 +140,6 @@ def _init_db():
                 f.unlink()
             except OSError:
                 pass
-
-    # 重新嘗試一次 (這次一定會成功，因為環境是乾淨的)
     _create_and_verify()
 
 
@@ -157,7 +159,7 @@ class PaperTradingAccount:
     def get_or_create(
         cls,
         name: str = "default",
-        initial_capital: float = 1_000_000,
+        initial_capital: float = DEFAULT_INITIAL_CAPITAL,
     ) -> "PaperTradingAccount":
         """取得或建立指定名稱的帳戶"""
         with _connect() as conn:
@@ -306,16 +308,48 @@ class PaperTradingAccount:
             "pnl_pct": pnl_pct,
         }
 
-    def reset(self):
-        """重置帳戶 (給 demo 用，把錢與持倉清空回到初始狀態)"""
+    def reset(self, new_initial_capital: Optional[float] = None):
+        """
+        重置帳戶 (給 demo 用，把錢與持倉清空回到初始狀態)。
+
+        參數:
+            new_initial_capital: 若提供，會把帳戶的「初始資金」一併升級成這個值。
+                                 不提供則保留原來的初始資金。
+        """
         with _connect() as conn:
-            conn.execute("UPDATE accounts SET cash=? WHERE id=?",
-                         (self.initial_capital, self.id))
+            if new_initial_capital is not None:
+                conn.execute(
+                    "UPDATE accounts SET initial_capital=?, cash=? WHERE id=?",
+                    (new_initial_capital, new_initial_capital, self.id),
+                )
+                self.initial_capital = new_initial_capital
+                self.cash = new_initial_capital
+            else:
+                conn.execute(
+                    "UPDATE accounts SET cash=? WHERE id=?",
+                    (self.initial_capital, self.id),
+                )
+                self.cash = self.initial_capital
             conn.execute("DELETE FROM positions WHERE account_id=?", (self.id,))
             conn.execute("DELETE FROM trades WHERE account_id=?", (self.id,))
-        self.cash = self.initial_capital
 
 
 def get_default_account() -> PaperTradingAccount:
-    """取得預設虛擬帳戶 (給 Streamlit 用)"""
-    return PaperTradingAccount.get_or_create("default", initial_capital=1_000_000)
+    """
+    取得預設虛擬帳戶 (給 Streamlit 用)。
+
+    如果是新建帳戶 → 用 DEFAULT_INITIAL_CAPITAL 建立。
+    如果是既有帳戶且尚未做過交易 → 自動升級到新的預設值。
+    """
+    acc = PaperTradingAccount.get_or_create("default", initial_capital=DEFAULT_INITIAL_CAPITAL)
+
+    # 自動升級舊帳戶 (僅在沒有交易紀錄時，避免破壞使用者的損益)
+    if acc.initial_capital < DEFAULT_INITIAL_CAPITAL:
+        with _connect() as conn:
+            n_trades = conn.execute(
+                "SELECT COUNT(*) FROM trades WHERE account_id=?", (acc.id,)
+            ).fetchone()[0]
+        if n_trades == 0:
+            acc.reset(new_initial_capital=DEFAULT_INITIAL_CAPITAL)
+
+    return acc
