@@ -29,6 +29,33 @@ _DEFAULT_DB = Path(__file__).resolve().parents[2] / "data" / "paper_trading.db"
 DB_PATH = Path(os.environ.get("PAPER_TRADING_DB_PATH", str(_DEFAULT_DB)))
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
+
+def _clean_orphan_sqlite_files():
+    """
+    開機時清理孤兒的 SQLite 暫存檔 (-journal / -wal / -shm)。
+
+    為什麼需要這個:
+        Streamlit Cloud 部署時，git repo 裡如果不小心包含 .db-journal 卻沒有
+        對應的 .db 主檔，SQLite 開啟時會嘗試從不完整的日誌「復原」，造成
+        CREATE TABLE 靜默失敗，最終出現 "no such table: accounts" 錯誤。
+
+    這個函式檢查:如果主 db 不存在但有 journal/wal/shm，就把它們刪掉，
+    確保下一次 _init_db() 能在乾淨的環境下建立資料表。
+    """
+    if DB_PATH.exists():
+        return  # 主檔在就不動，讓 SQLite 自己處理
+    for suffix in ("-journal", "-wal", "-shm"):
+        orphan = DB_PATH.with_name(DB_PATH.name + suffix)
+        if orphan.exists():
+            try:
+                orphan.unlink()
+            except OSError:
+                pass  # 刪不掉也別崩潰
+
+
+_clean_orphan_sqlite_files()
+
+
 # 沿用 backtest 中的台股實際成本
 COMMISSION_RATE = 0.001425 * 0.6   # 打 6 折
 TAX_RATE = 0.003
@@ -80,9 +107,38 @@ CREATE TABLE IF NOT EXISTS trades (
 
 
 def _init_db():
-    """初次執行時建立資料表"""
-    with _connect() as conn:
-        conn.executescript(_SCHEMA)
+    """
+    初次執行時建立資料表 (含自我驗證)。
+
+    如果第一次建立失敗 (例如 SQLite 因孤兒 journal 檔復原失敗)，
+    會把整個 db 檔砍掉重來，確保 Streamlit Cloud 部署時一定能成功。
+    """
+    def _create_and_verify():
+        with _connect() as conn:
+            conn.executescript(_SCHEMA)
+            # 驗證 accounts 表確實存在
+            row = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='accounts'"
+            ).fetchone()
+            return row is not None
+
+    try:
+        if _create_and_verify():
+            return  # 成功就直接結束
+    except Exception:
+        pass
+
+    # 第一次失敗 → 把整個 db 檔砍了重建
+    for suffix in ("", "-journal", "-wal", "-shm"):
+        f = DB_PATH.with_name(DB_PATH.name + suffix)
+        if f.exists():
+            try:
+                f.unlink()
+            except OSError:
+                pass
+
+    # 重新嘗試一次 (這次一定會成功，因為環境是乾淨的)
+    _create_and_verify()
 
 
 _init_db()

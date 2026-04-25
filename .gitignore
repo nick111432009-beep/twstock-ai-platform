@@ -9,11 +9,21 @@ env/
 # Streamlit
 .streamlit/secrets.toml
 
-# 資料快取與虛擬交易資料庫
+# 資料快取
 data/*.csv
 data/*.parquet
-data/paper_trading.db
+data/cache/
 *.pkl
+
+# SQLite 資料庫 (含暫存/日誌檔)
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
 
 # 模型權重（太大不傳 git）
 *.pth
