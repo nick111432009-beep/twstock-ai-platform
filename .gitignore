@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# 資料快取與虛擬交易資料庫
+data/*.csv
+data/*.parquet
+data/paper_trading.db
+*.pkl
+
+# 模型權重（太大不傳 git）
+*.pth
+*.h5
+models_saved/
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/

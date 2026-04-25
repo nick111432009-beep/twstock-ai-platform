@@ -1,0 +1,15 @@
+# Streamlit 介面主題設定（深色金融風格）
+[theme]
+base = "dark"
+primaryColor = "#FF4B4B"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#1E222A"
+textColor = "#FAFAFA"
+font = "sans serif"
+
+[server]
+# 部署時的最大上傳大小 (MB)
+maxUploadSize = 50
+
+[browser]
+gatherUsageStats = false
