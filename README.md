@@ -13,7 +13,7 @@
 | 模組 | 說明 |
 |------|------|
 | 📈 個股分析 | 互動式 K 線圖、技術指標 (RSI / MACD / KD / 布林通道) |
-| 🤖 AI 預測 | LSTM、Transformer、XGBoost 三模型同台比較 |
+| 🤖 AI 預測 | LSTM vs Transformer 兩大主流時序模型對比 |
 | 📊 策略回測 | 5 種內建策略，含台股實際手續費與證交稅 |
 | 💰 虛擬交易 | SQLite 持久化模擬下單，安全無風險 |
 
@@ -105,8 +105,7 @@ git push -u origin main
 │   ├── models/                     # AI 模型
 │   │   ├── base.py                 # 共用工具
 │   │   ├── lstm_model.py           # LSTM
-│   │   ├── transformer_model.py    # Transformer
-│   │   └── xgboost_model.py        # XGBoost
+│   │   └── transformer_model.py    # Transformer
 │   ├── backtest/                   # 回測引擎
 │   │   ├── engine.py               # 向量化回測
 │   │   └── strategies.py           # 5 種策略
@@ -135,7 +134,7 @@ yfinance API → parquet 快取 → pandas DataFrame
                 ┌─────────────────────────────────┐
                 ↓                  ↓               ↓
             前端視覺化          AI 模型訓練     策略回測
-            (Plotly K 線)    (LSTM/Trans/XGB)   (信號→績效)
+            (Plotly K 線)    (LSTM/Transformer)  (信號→績效)
                                     ↓
                              虛擬交易下單 (SQLite)
 ```
@@ -144,9 +143,8 @@ yfinance API → parquet 快取 → pandas DataFrame
 
 | 模型 | 架構 | 優勢 |
 |------|------|------|
-| **LSTM** | 雙層 LSTM(64) + Dropout + FC | 經典時序模型，趨勢捕捉好 |
-| **Transformer** | 2 層 Encoder + Self-Attention | 長期依賴、平行計算 |
-| **XGBoost** | Gradient Boosting Tree | 快速、可解釋、強 baseline |
+| **LSTM** | 雙層 LSTM(64) + Dropout + FC | 經典時序模型，趨勢捕捉好，小資料表現穩 |
+| **Transformer** | 2 層 Encoder + Self-Attention | 長期依賴、平行計算，現代主流架構 |
 
 ### 評估指標
 - **RMSE / MAE** — 預測誤差

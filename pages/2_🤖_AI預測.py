@@ -16,14 +16,14 @@ import streamlit as st
 from src.data import get_stock_data, list_popular_stocks
 from src.indicators import add_all_indicators
 from src.models import (
-    prepare_supervised_data, train_lstm, train_transformer, train_xgboost,
+    prepare_supervised_data, train_lstm, train_transformer,
 )
 from src.utils import prediction_chart
 
 
 st.set_page_config(page_title="AI 預測", page_icon="🤖", layout="wide")
 st.title("🤖 AI 股價預測")
-st.caption("深度學習模型 (LSTM / Transformer) vs 機器學習基準 (XGBoost)")
+st.caption("LSTM vs Transformer — 兩大主流深度學習時序模型對決")
 
 # ============================================================
 # Sidebar
@@ -48,7 +48,6 @@ with st.sidebar:
     st.subheader("🎯 模型選擇")
     use_lstm = st.checkbox("LSTM", value=True)
     use_transformer = st.checkbox("Transformer", value=True)
-    use_xgboost = st.checkbox("XGBoost", value=True)
 
     st.markdown("---")
     st.subheader("⚙️ 訓練超參數")
@@ -77,10 +76,6 @@ if not train_btn:
     **Transformer**
     使用自注意力機制 (Self-Attention)，可同時關注時間序列上所有位置的關係，
     在多項時序任務上表現優於 RNN 系列。
-
-    **XGBoost**
-    梯度提升決策樹，是 Kaggle 競賽與業界量化交易最常用的模型。
-    雖然不是深度學習，但在表格特徵上常常打敗深度模型，是很好的 baseline。
 
     ### 🎯 評估指標
     - **RMSE**: 均方根誤差 (越小越好)
@@ -151,14 +146,6 @@ if use_transformer:
         progress_callback=trans_callback,
     )
     st.success(f"Transformer 訓練完成 ({time.time() - t0:.1f}s)")
-
-# ---- XGBoost ----
-if use_xgboost:
-    st.markdown("### 🌲 XGBoost 訓練")
-    with st.spinner("XGBoost 訓練中..."):
-        t0 = time.time()
-        results["XGBoost"] = train_xgboost(data_dict)
-    st.success(f"XGBoost 訓練完成 ({time.time() - t0:.1f}s)")
 
 # ============================================================
 # 比較結果

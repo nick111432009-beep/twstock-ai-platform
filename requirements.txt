@@ -20,7 +20,6 @@ numpy==1.26.4
 
 # ---- 機器學習 / 深度學習 ----
 scikit-learn==1.5.2
-xgboost==2.1.3
 torch==2.5.1
 # torch CPU 版本即可，Streamlit Cloud 沒 GPU
 
