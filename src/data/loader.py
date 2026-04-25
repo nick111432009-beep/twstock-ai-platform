@@ -175,8 +175,22 @@ class StockDataLoader:
                 # 快取壞了就重撈
                 pass
 
-        # ---- 從 yfinance 擷取 ----
-        df = self._fetch_yfinance(meta.yf_ticker, start, end)
+        # ---- 從 yfinance 擷取 (主要來源) ----
+        try:
+            df = self._fetch_yfinance(meta.yf_ticker, start, end)
+        except Exception as yf_err:
+            # ---- yfinance 失敗 → 切換到 twstock (台灣本土資料源) ----
+            try:
+                df = self._fetch_twstock(meta.symbol.split(".")[0], start, end)
+                if df.empty:
+                    raise ValueError("twstock 也回傳空資料")
+            except Exception as tw_err:
+                # 兩個來源都失敗才 raise
+                raise RuntimeError(
+                    f"yfinance 與 twstock 都擷取失敗:\n"
+                    f"  yfinance: {yf_err}\n"
+                    f"  twstock: {tw_err}"
+                )
 
         # ---- 寫入快取 ----
         if self.use_cache and not df.empty:
@@ -185,6 +199,38 @@ class StockDataLoader:
             except Exception:
                 pass  # 寫入失敗不影響使用，靜默忽略
 
+        return df
+
+    def _fetch_twstock(self, symbol: str, start: str, end: str) -> pd.DataFrame:
+        """從 twstock 抓資料 (備援來源，直接打台灣證交所)"""
+        import twstock
+
+        start_dt = datetime.strptime(start, "%Y-%m-%d")
+        end_dt = datetime.strptime(end, "%Y-%m-%d")
+
+        stock = twstock.Stock(symbol)
+        # twstock 是 fetch_from(年, 月)，會抓那個月之後到現在的資料
+        records = stock.fetch_from(start_dt.year, start_dt.month)
+        if not records:
+            return pd.DataFrame()
+
+        df = pd.DataFrame([
+            {
+                "Date": r.date,
+                "Open": r.open,
+                "High": r.high,
+                "Low": r.low,
+                "Close": r.close,
+                "Volume": r.capacity,
+            }
+            for r in records
+        ]).set_index("Date")
+        df.index = pd.to_datetime(df.index).tz_localize(None)
+        df.index.name = "Date"
+
+        # 截到實際要求的 end 日期
+        df = df[df.index <= pd.Timestamp(end_dt)]
+        df = df.dropna(how="all")
         return df
 
     # ------------------------------------------------------------

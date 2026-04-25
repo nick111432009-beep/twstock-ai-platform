@@ -6,9 +6,11 @@ streamlit==1.40.1
 plotly==5.24.1
 
 # ---- 資料來源 ----
-yfinance==0.2.50
+# yfinance 用 >= 因為 Yahoo API 常變動，舊版會失效
+yfinance>=0.2.55,<0.3
 twstock==1.3.1
-requests==2.32.3
+requests>=2.32,<3
+curl_cffi>=0.7.0  # yfinance 新版需要，模擬瀏覽器避免被擋
 
 # ---- 資料處理 ----
 pandas==2.2.3
