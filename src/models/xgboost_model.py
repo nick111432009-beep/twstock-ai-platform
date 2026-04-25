@@ -1,80 +1,31 @@
 """
-XGBoost 模型 — 股價預測 (Baseline)
-==================================
-XGBoost 是 Kaggle 與業界量化交易最常用的梯度提升樹模型。
-雖然不是深度學習，但在表格特徵上常常打敗 LSTM/Transformer，
-所以一定要當 baseline 比一比，才能在報告中講「為什麼選 X 模型」。
+[DEPRECATED] XGBoost 模型 — 已從本專案移除
+==========================================
+本專案經實驗發現 XGBoost (樹模型) 在股價預測任務上有兩大根本限制:
 
-注意:
-    - XGBoost 不能直接吃 3D 時間序列張量
-    - 我們把過去 lookback 天的特徵展平成一條長向量當輸入 (data_dict 中已準備)
+1. **無法外推 (cannot extrapolate)** — 樹模型只能輸出訓練時看過的數值範圍。
+   當股價創歷史新高時，XGBoost 會持續輸出歷史均值附近，造成嚴重預測誤差
+   (實驗中 RMSE 高達 382，遠遠輸給 LSTM 的 97)。
+
+2. **時間結構被破壞** — 樹模型只能吃 2D 表格特徵。
+   把 30 天時間窗展平成 540 維特徵後，模型不再知道哪個是「昨天」哪個是「一個月前」。
+
+因此本專案聚焦於 LSTM 與 Transformer 兩大主流時序深度學習模型。
+本檔案保留為 stub，避免未安裝 xgboost 套件時其他程式碼不小心 import 會直接崩潰。
+
+如需重新啟用，請:
+  1. 在 requirements.txt 加回 xgboost==2.1.3
+  2. 在 src/models/__init__.py 重新匯入 train_xgboost
+  3. 從 git 歷史還原本檔的原始實作 (commit 之前)
 """
 
 from __future__ import annotations
 
-import numpy as np
-import xgboost as xgb
 
-from .base import ModelResult, compute_metrics
-
-
-def train_xgboost(
-    data_dict: dict,
-    n_estimators: int = 300,
-    max_depth: int = 5,
-    learning_rate: float = 0.05,
-    subsample: float = 0.8,
-    colsample_bytree: float = 0.8,
-    early_stopping_rounds: int = 30,
-) -> ModelResult:
-    """
-    訓練 XGBoost 迴歸模型，使用展平後的時間序列特徵
-    """
-    X_train_flat = data_dict["X_train_flat"]
-    X_test_flat = data_dict["X_test_flat"]
-    y_train = data_dict["y_train"]
-    y_test = data_dict["y_test"]
-
-    model = xgb.XGBRegressor(
-        n_estimators=n_estimators,
-        max_depth=max_depth,
-        learning_rate=learning_rate,
-        subsample=subsample,
-        colsample_bytree=colsample_bytree,
-        objective="reg:squarederror",
-        tree_method="hist",
-        random_state=42,
-        early_stopping_rounds=early_stopping_rounds,
-    )
-
-    model.fit(
-        X_train_flat,
-        y_train,
-        eval_set=[(X_test_flat, y_test)],
-        verbose=False,
-    )
-
-    y_pred_scaled = model.predict(X_test_flat)
-
-    # 反正規化
-    y_scaler = data_dict["y_scaler"]
-    y_pred = y_scaler.inverse_transform(y_pred_scaled.reshape(-1, 1)).flatten()
-    y_true = y_scaler.inverse_transform(y_test.reshape(-1, 1)).flatten()
-
-    rmse, mae, dir_acc = compute_metrics(y_true, y_pred)
-
-    # XGBoost 沒有 epoch loss history (它是 boosting)，但可以拿 evals_result
-    eval_results = model.evals_result()
-    val_history = list(eval_results.get("validation_0", {}).get("rmse", []))
-
-    return ModelResult(
-        model_name="XGBoost",
-        y_true=y_true,
-        y_pred=y_pred,
-        train_loss_history=[],
-        val_loss_history=val_history,
-        rmse=rmse,
-        mae=mae,
-        direction_accuracy=dir_acc,
-        test_dates=data_dict["test_dates"],
+def train_xgboost(*args, **kwargs):
+    """已停用 — 呼叫此函式會丟出 NotImplementedError"""
+    raise NotImplementedError(
+        "XGBoost 模型已從本專案移除。\n"
+        "原因:樹模型在股價預測上有外推與時序結構問題 (見本檔頭部說明)。\n"
+        "本平台聚焦於 LSTM 與 Transformer 兩大時序模型。"
     )

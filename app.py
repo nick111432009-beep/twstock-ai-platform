@@ -5,8 +5,8 @@
 使用 streamlit run app.py 啟動後，左側 sidebar 會自動列出 pages/ 下的子頁面。
 
 子頁面:
-    1_📈_股票分析.py   — 個股 K 線、技術指標互動分析
-    2_🤖_AI預測.py    — LSTM / Transformer / XGBoost 三模型訓練與比較
+    1_📈_股票分析.py   — 個股 K 線、技術指標互動分析(含新手白話解讀)
+    2_🤖_AI預測.py    — LSTM vs Transformer 兩大時序模型對比
     3_📊_策略回測.py   — 多種交易策略回測，看績效報告
     4_💰_虛擬交易.py   — Paper Trading 模擬下單與帳戶管理
 
@@ -58,10 +58,10 @@ with col1:
 with col2:
     st.markdown("""
     #### 🤖 AI 模型預測
-    - **LSTM**: 經典時序模型
-    - **Transformer**: 注意力機制
-    - **XGBoost**: 梯度提升樹基準
-    - 三模型同台比較
+    - **LSTM**: 經典時序模型(雙層 64)
+    - **Transformer**: 自注意力機制
+    - 兩大主流深度學習對比
+    - 內建白話解讀,新手友善
     """)
 
     st.markdown("""
@@ -80,7 +80,7 @@ st.markdown("""
 ```
 資料層      → yfinance / twstock → 本地 parquet 快取
 特徵層      → 技術指標 (SMA, EMA, RSI, MACD, KD, BB, ATR, OBV)
-模型層      → LSTM / Transformer / XGBoost (PyTorch + scikit-learn)
+模型層      → LSTM / Transformer (PyTorch)
 策略層      → 5 種內建策略 + AI 信號策略
 回測層      → 向量化引擎 (含手續費、證交稅、滑價)
 應用層      → Streamlit 多頁面互動式 UI
@@ -91,8 +91,8 @@ st.markdown("""
 st.markdown("---")
 st.subheader("🚀 使用步驟")
 st.markdown("""
-1. **左側選擇頁面 → 「📈 股票分析」** 輸入台股代碼 (如 2330)，先看一下 K 線
-2. **「🤖 AI 預測」** 訓練三個模型，比較哪一個對該支股票預測最準
+1. **左側選擇頁面 → 「📈 股票分析」** 輸入台股代碼 (如 2330)，看 K 線並讀「白話解讀」學習指標意義
+2. **「🤖 AI 預測」** 訓練 LSTM 與 Transformer 兩個模型，比較哪一個對該檔股票預測較準,並查看白話翻譯
 3. **「📊 策略回測」** 把策略丟進歷史資料，看歷史報酬與最大回撤
 4. **「💰 虛擬交易」** 用 AI 信號或自選策略做模擬下單，追蹤帳戶損益
 
@@ -109,8 +109,8 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("### 🛠️ 技術棧")
-    st.caption("- Python 3.10+")
+    st.caption("- Python 3.11")
     st.caption("- Streamlit + Plotly")
     st.caption("- PyTorch (LSTM / Transformer)")
-    st.caption("- XGBoost / scikit-learn")
-    st.caption("- yfinance / pandas")
+    st.caption("- scikit-learn (資料前處理)")
+    st.caption("- yfinance / twstock / pandas")

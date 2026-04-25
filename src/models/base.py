@@ -1,12 +1,12 @@
 """
 模型共用工具
 ============
-這個檔案放三大模型 (LSTM / Transformer / XGBoost) 都會用到的共用元件:
+這個檔案放兩大模型 (LSTM / Transformer) 都會用到的共用元件:
 
 1. ModelResult: 統一的訓練輸出格式 (給前端比較模型用)
 2. prepare_supervised_data: 把時間序列轉成監督式學習格式
    - LSTM/Transformer 需要 3D 張量 (samples, time_steps, features)
-   - XGBoost 需要 2D 矩陣 (samples, features) → 用「展平」方式處理
+   - 同時保留 2D 展平版本 (X_train_flat) 供未來擴充樹模型使用
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from sklearn.preprocessing import MinMaxScaler
 @dataclass
 class ModelResult:
     """訓練 + 預測結果統一容器"""
-    model_name: str                                # "LSTM" / "Transformer" / "XGBoost"
+    model_name: str                                # "LSTM" / "Transformer"
     y_true: np.ndarray                             # 真實值 (測試集)
     y_pred: np.ndarray                             # 預測值 (測試集)
     train_loss_history: list[float] = field(default_factory=list)
@@ -88,7 +88,7 @@ def prepare_supervised_data(
 
     回傳 dict 含:
         X_train, y_train, X_test, y_test            # 給 LSTM/Transformer (3D)
-        X_train_flat, X_test_flat                    # 給 XGBoost (2D, 將時間展平)
+        X_train_flat, X_test_flat                    # 2D 展平版 (備用，給樹模型)
         y_scaler, feature_scaler                     # 反正規化用
         test_dates                                   # 測試集對應日期
     """
@@ -124,7 +124,7 @@ def prepare_supervised_data(
     y_train, y_test = y[:split_idx], y[split_idx:]
     test_dates = dates[split_idx:]
 
-    # 給 XGBoost 的展平版本 (samples, lookback × n_features)
+    # 2D 展平版本 (samples, lookback × n_features) — 備用，給樹模型擴充用
     X_train_flat = X_train.reshape(X_train.shape[0], -1)
     X_test_flat = X_test.reshape(X_test.shape[0], -1)
 

@@ -1,5 +1,5 @@
 """
-頁面 2: AI 預測 — LSTM / Transformer / XGBoost 三模型訓練、預測與比較
+頁面 2: AI 預測 — LSTM 與 Transformer 兩大時序模型訓練、預測、白話解讀
 """
 
 import sys
@@ -18,7 +18,7 @@ from src.indicators import add_all_indicators
 from src.models import (
     prepare_supervised_data, train_lstm, train_transformer,
 )
-from src.utils import prediction_chart
+from src.utils import prediction_chart, interpret_ai_prediction
 
 
 st.set_page_config(page_title="AI 預測", page_icon="🤖", layout="wide")
@@ -162,9 +162,65 @@ if results:
     best_model = min(results.values(), key=lambda r: r.rmse)
     st.success(f"🏆 RMSE 最低: **{best_model.model_name}** (RMSE = {best_model.rmse:.4f})")
 
-    # 預測對照圖
+    # ============================================================
+    # 🎓 新手白話翻譯 — 把每個模型的最後一筆預測翻成人話
+    # ============================================================
     st.markdown("---")
-    st.subheader("📈 預測 vs 實際")
+    st.subheader("🎓 AI 預測白話解讀")
+    st.caption("把模型的數字輸出翻譯成新手看得懂的中文，並提供操作建議")
+
+    interpret_cols = st.columns(len(results))
+    for col, (name, res) in zip(interpret_cols, results.items()):
+        with col:
+            # 取最後一筆「真實值」當作目前股價，「預測值」當作明日預測
+            current_price = float(res.y_true[-1])
+            predicted_price = float(res.y_pred[-1])
+            interp = interpret_ai_prediction(
+                current_price=current_price,
+                predicted_price=predicted_price,
+                direction_accuracy=res.direction_accuracy,
+                model_name=name,
+            )
+
+            # 標題與訊號
+            st.markdown(f"### {interp['signal']}")
+            st.markdown(f"**{interp['headline']}**")
+
+            # 預測數字
+            st.metric(
+                label=f"明日預測收盤 (vs 目前 {current_price:.2f})",
+                value=f"{predicted_price:.2f}",
+                delta=f"{interp['change']:+.2f} ({interp['change_pct']:+.2f}%)",
+            )
+
+            # 信心度
+            st.markdown(
+                f"**信心度**: {interp['confidence_emoji']} **{interp['confidence_level']}**  \n"
+                f"_({interp['confidence_note']})_  \n"
+                f"歷史方向準確率: **{interp['direction_accuracy']*100:.1f}%**"
+            )
+
+            st.markdown("**🎯 操作建議**")
+            st.success(interp["action_advice"])
+
+    # 共同的安全提醒(只顯示一次)
+    st.markdown("---")
+    st.markdown("### 🚨 重要提醒(必讀)")
+    # 用第一個模型的 general_warn,因為是固定文字
+    first_interp = list(results.values())[0]
+    sample_warn = interpret_ai_prediction(
+        current_price=1.0, predicted_price=1.0,
+        direction_accuracy=first_interp.direction_accuracy,
+    )
+    st.warning(sample_warn["general_warn"])
+
+    # ============================================================
+    # 預測 vs 實際對照圖
+    # ============================================================
+    st.markdown("---")
+    st.subheader("📈 預測 vs 實際 走勢圖")
+    st.caption("圖中紅線是真實股價、虛線是模型預測。理想狀況兩條線會疊在一起。")
+
     for name, res in results.items():
         st.plotly_chart(
             prediction_chart(res.test_dates, res.y_true, res.y_pred, name),
