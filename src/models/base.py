@@ -93,14 +93,19 @@ def prepare_supervised_data(
         test_dates                                   # 測試集對應日期
     """
     # 移除前面 NaN (技術指標前期會有 NaN)
-    data = df[feature_cols + [target_col]].dropna().copy()
+    # 重要: 用 dict.fromkeys 去除重複欄位，避免 target_col 同時在 feature_cols 時
+    #      出現「同名欄位重複」造成 MinMaxScaler 維度錯誤
+    unique_cols = list(dict.fromkeys(feature_cols + [target_col]))
+    data = df[unique_cols].dropna().copy()
 
     # 正規化 (時間序列模型不正規化會跑很慢/不收斂)
     feature_scaler = MinMaxScaler()
     feature_scaled = feature_scaler.fit_transform(data[feature_cols].values)
 
+    # 用 .loc 明確取出單欄並轉 2D (n, 1)，避免 DataFrame 有同名欄位時取到多欄
     y_scaler = MinMaxScaler()
-    target_scaled = y_scaler.fit_transform(data[[target_col]].values).flatten()
+    target_values = data[target_col].to_numpy().reshape(-1, 1)
+    target_scaled = y_scaler.fit_transform(target_values).flatten()
 
     # 滑動窗口製作 (X_t = 過去 lookback 天的特徵, y_t = 第 t+horizon 天的價格)
     X, y, dates = [], [], []
