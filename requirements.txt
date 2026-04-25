@@ -14,8 +14,7 @@ requests==2.32.3
 pandas==2.2.3
 numpy==1.26.4
 
-# ---- 技術指標 ----
-pandas-ta==0.3.14b0
+# ---- 技術指標 (使用純 pandas 自行實作，不依賴 TA-Lib / pandas-ta) ----
 
 # ---- 機器學習 / 深度學習 ----
 scikit-learn==1.5.2
